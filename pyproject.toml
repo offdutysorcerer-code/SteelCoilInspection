@@ -1,0 +1,29 @@
+[project]
+name = "steel-coil-inspection"
+version = "0.1.0"
+description = "Steel coil shipment inspection pipeline: dataset preparation, object detection, coil ID OCR, and rule-based reports."
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "opencv-python>=4.8.0",
+    "ultralytics>=8.3.0",
+    "pillow>=10.0.0",
+    "pyyaml>=6.0.1",
+    "pandas>=2.0.0",
+    "paddleocr>=2.7.0",
+    "paddlepaddle>=2.6.0",
+    "rich>=13.0.0",
+    "pyside6>=6.11.1",
+]
+
+[project.scripts]
+steelcoil = "steelcoil.cli:main"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/steelcoil"]

@@ -1,0 +1,15 @@
+<View>
+  <Header value="Steel Coil Inspection 標註"/>
+  <Text name="case_info" value="$case_info"/>
+  <Image name="image" value="$image" zoom="true" zoomControl="true" rotateControl="true"/>
+  <RectangleLabels name="label" toName="image">
+    <Label value="coil" background="#FF6250"/>
+    <Label value="coil_id_text" background="#2B86FF"/>
+    <Label value="rubber_pad" background="#111111"/>
+    <Label value="chain" background="#F5A623"/>
+    <Label value="strap" background="#7ED321"/>
+    <Label value="tarp" background="#4A90E2"/>
+    <Label value="wood_block" background="#8B572A"/>
+    <Label value="trailer" background="#9013FE"/>
+  </RectangleLabels>
+</View>

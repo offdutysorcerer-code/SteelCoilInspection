@@ -1,0 +1,19 @@
+names:
+  0: coil
+  1: coil_id_text
+  2: rubber_pad
+  3: chain
+  4: strap
+  5: tarp
+  6: wood_block
+  7: trailer
+
+label_notes:
+  coil: "整個鋼捲可見外框，包含圓筒側面或俯視可見部分。"
+  coil_id_text: "鋼捲上的手寫、噴印或粉筆編號區域，只框文字，不框整個鋼捲。"
+  rubber_pad: "黑色膠墊、止滑墊、承托墊。每片單獨標。"
+  chain: "固定用鍊條。若鍊條很長，框可見主要段落。"
+  strap: "鐵帶、綁帶、束帶。"
+  tarp: "藍布、棕布、防水布、帆布。"
+  wood_block: "木座、木枕、墊木。"
+  trailer: "拖車平台或車斗範圍。"
