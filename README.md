@@ -78,3 +78,34 @@ uv run steelcoil yolo-yaml
 4. 用模型裁切 `coil_id_text`
 5. 對裁切小圖做 OCR
 6. 用規則引擎產生稽核報告
+
+## 開發進度 (Development Progress)
+
+### v0.3.0 (2026-06-27)
+
+**專案狀態**
+*   **訓練進度**：已完成 50 Epochs 訓練。
+*   **模型位置**：`runs\detect\runs\detect\steel_coil-2\weights\best.pt`
+*   **模型表現**：
+    *   `coil`：預測準確，可用於輔助標註。
+    *   `coil_id_text`：準確度低（因訓練數據不足），目前需依賴人工修正。
+
+**已實作功能**
+1.  **AI 推論模組** (`src/steelcoil/qt_labeler/inference.py`)
+    *   負責載入 `best.pt`。
+    *   提供 `predict(image_path)` 方法，回傳預測結果。
+2.  **Canvas 視覺化與互動** (`src/steelcoil/qt_labeler/image_canvas.py`)
+    *   **視覺區隔**：預測框繪製為「綠色虛線」，人工框為「實線」。
+    *   **點擊確認**：預測框中心有小圓圈提示，點擊後轉為正式標註框。
+    *   **清空功能**：支援一鍵刪除當前圖片的所有預測框。
+3.  **主視窗整合** (`src/steelcoil/qt_labeler/main_window.py`)
+    *   **AI 開關**：新增「AI 推論」按鈕，預設關閉。
+    *   **停用自動指派**：新標註框預設維持「未指派」。
+    *   **強化縮圖選取**：提升視覺對比。
+
+**已知限制**
+*   **預測框限制**：目前僅支援「點擊確認」與「刪除」，不支援拖曳微調。
+*   **非持久性**：預測框僅為視覺覆蓋層，存檔後不會寫入 annotation 檔案。
+
+---
+*更多詳細進度請參考 [dev_progress_v0.3.0.md](dev_progress_v0.3.0.md)*
