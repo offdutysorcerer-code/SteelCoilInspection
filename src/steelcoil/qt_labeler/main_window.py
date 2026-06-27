@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from .image_canvas import ImageCanvas
+from .inference import InferenceEngine
 from .models import Box, ImageAnnotation, load_case_annotation, save_case_annotation
 from .yolo_export import LABELS, export_case_to_yolo
 from ..case_model import parse_case_id
@@ -86,9 +87,20 @@ class MainWindow(QMainWindow):
         self.paste_button = QPushButton("貼上框 Ctrl+V")
         self.paste_button.clicked.connect(self.paste_box)
 
+        # AI Toggle Button
+        self.ai_toggle_button = QPushButton("AI 推論：關閉")
+        self.ai_toggle_button.clicked.connect(self.toggle_ai_inference)
+        self.ai_toggle_button.setStyleSheet("color: red; font-weight: bold;")
+
         self.canvas = ImageCanvas()
         self.canvas.annotation_changed.connect(self.on_annotation_changed)
         self.canvas.selection_changed.connect(self.on_selection_changed)
+
+        # AI Inference Engine
+        self.inference_engine = InferenceEngine(
+            "runs/detect/runs/detect/steel_coil-2/weights/best.pt"
+        )
+        self.is_ai_enabled = False  # Start with AI disabled
 
         label_box = QGroupBox("標籤快捷鍵")
         label_layout = QVBoxLayout()
@@ -151,6 +163,7 @@ class MainWindow(QMainWindow):
         io_layout = QHBoxLayout()
         io_layout.addWidget(self.save_button)
         io_layout.addWidget(self.export_button)
+        io_layout.addWidget(self.ai_toggle_button)
         left_layout.addLayout(io_layout)
 
         left_panel = QWidget()
@@ -355,6 +368,15 @@ class MainWindow(QMainWindow):
         self.current_image = self.image_paths[row]
         image_ann = self.annotation.get_image_annotation(self.current_image)
         self.canvas.set_image(self.current_image, image_ann)
+        
+        # Trigger AI Inference if enabled
+        if self.is_ai_enabled and self.inference_engine.is_loaded:
+            predictions = self.inference_engine.predict(self.current_image)
+            self.canvas.set_predictions(predictions)
+            self.status_label.setText(f"AI 推論完成：{len(predictions)} 個預測框")
+        else:
+            self.canvas.set_predictions([])
+
         self.refresh_box_list()
         self.refresh_coil_tree()
         self.refresh_track_combo()
@@ -515,6 +537,22 @@ class MainWindow(QMainWindow):
         self.canvas.selection_changed.emit(new_box)
         self.on_annotation_changed()
         self.canvas.update()
+
+    def toggle_ai_inference(self) -> None:
+        self.is_ai_enabled = not self.is_ai_enabled
+        if self.is_ai_enabled:
+            self.ai_toggle_button.setText("AI 推論：開啟")
+            self.ai_toggle_button.setStyleSheet("color: green; font-weight: bold;")
+            self.status_label.setText("AI 推論已開啟")
+        else:
+            self.ai_toggle_button.setText("AI 推論：關閉")
+            self.ai_toggle_button.setStyleSheet("color: red; font-weight: bold;")
+            self.canvas.set_predictions([])
+            self.status_label.setText("AI 推論已關閉")
+        
+        # Refresh current image to apply changes
+        if self.current_image and self.annotation:
+            self.on_image_selected(self.image_paths.index(self.current_image))
 
     def export_yolo(self) -> None:
         if not self.case_dir or not self.annotation:

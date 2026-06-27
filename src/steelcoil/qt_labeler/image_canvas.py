@@ -47,6 +47,7 @@ class ImageCanvas(QWidget):
         self.selected_box_id: str | None = None
         self.resize_handle: str | None = None
         self.resize_original: QRectF | None = None
+        self.prediction_boxes: list[dict] = []  # Stores AI prediction results
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -69,6 +70,11 @@ class ImageCanvas(QWidget):
         if selected:
             selected.label = label
             self.annotation_changed.emit()
+        self.update()
+
+    def set_predictions(self, predictions: list[dict]) -> None:
+        """Update the prediction boxes and refresh the canvas."""
+        self.prediction_boxes = predictions
         self.update()
 
     def get_selected_box(self) -> Box | None:
@@ -158,6 +164,17 @@ class ImageCanvas(QWidget):
         painter.drawPixmap(target, self.pixmap, QRectF(self.pixmap.rect()))
 
         if self.annotation:
+            # Draw prediction boxes (green dashed lines)
+            if self.prediction_boxes:
+                for pred in self.prediction_boxes:
+                    rect = QRectF(pred["x"], pred["y"], pred["width"], pred["height"])
+                    screen_rect = self.image_to_screen(rect)
+                    painter.setPen(QPen(Qt.GlobalColor.green, 2, Qt.PenStyle.DashLine))
+                    painter.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+                    painter.drawRect(screen_rect)
+                    # Optional: Draw label for prediction
+                    painter.drawText(screen_rect.topLeft() + QPointF(4, -4), f"{pred['label']} {pred['confidence']:.2f}")
+
             for box in self.annotation.boxes:
                 color = LABEL_COLORS.get(box.label, Qt.GlobalColor.yellow)
                 pen_width = 4 if box.id == self.selected_box_id else 2
