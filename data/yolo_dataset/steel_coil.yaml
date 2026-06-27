@@ -1,0 +1,13 @@
+path: D:\AIProjects\A1\SteelCoilInspection\data\yolo_dataset
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: coil
+  1: coil_id_text
+  2: rubber_pad
+  3: chain
+  4: strap
+  5: tarp
+  6: wood_block
+  7: trailer

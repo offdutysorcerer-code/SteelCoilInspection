@@ -6,7 +6,7 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description="Create YOLO dataset yaml from configs/labels.yaml.")
     parser.add_argument("--labels", default="configs/labels.yaml")
-    parser.add_argument("--out", default="data/yolo_dataset/steel_coil.yaml")
+    parser.add_argument("--out", default="data/yolo/steel_coil.yaml")
     args = parser.parse_args()
 
     labels_path = Path(args.labels)
@@ -19,7 +19,7 @@ def main():
     names = labels_config["names"]
 
     dataset_yaml = {
-        "path": str(Path("data/yolo_dataset").resolve()),
+        "path": str(Path("data/yolo").resolve()),
         "train": "images/train",
         "val": "images/val",
         "test": "images/test",

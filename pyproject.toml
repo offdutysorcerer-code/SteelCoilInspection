@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Steel coil shipment inspection pipeline: dataset preparation, object detection, coil ID OCR, and rule-based reports."
 requires-python = ">=3.11,<3.13"
 dependencies = [
-    "opencv-python>=4.8.0",
+    "opencv-python-headless>=4.8.0",
     "ultralytics>=8.3.0",
     "pillow>=10.0.0",
     "pyyaml>=6.0.1",

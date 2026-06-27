@@ -86,6 +86,8 @@ class MainWindow(QMainWindow):
         self.copy_button.clicked.connect(self.copy_selected_box)
         self.paste_button = QPushButton("貼上框 Ctrl+V")
         self.paste_button.clicked.connect(self.paste_box)
+        self.clear_pred_button = QPushButton("清空預測框")
+        self.clear_pred_button.clicked.connect(self.clear_predictions)
 
         # AI Toggle Button
         self.ai_toggle_button = QPushButton("AI 推論：關閉")
@@ -163,6 +165,7 @@ class MainWindow(QMainWindow):
         io_layout = QHBoxLayout()
         io_layout.addWidget(self.save_button)
         io_layout.addWidget(self.export_button)
+        io_layout.addWidget(self.clear_pred_button)
         io_layout.addWidget(self.ai_toggle_button)
         left_layout.addLayout(io_layout)
 
@@ -388,7 +391,8 @@ class MainWindow(QMainWindow):
         self.refresh_dynamic_panels()
 
     def on_annotation_changed(self) -> None:
-        self.assign_default_track_for_selected_box()
+        # 停用自動指派，維持使用者標註意圖
+        # self.assign_default_track_for_selected_box()
         self.push_history()
         self.save_annotations()
         self.refresh_dynamic_panels()
@@ -537,6 +541,10 @@ class MainWindow(QMainWindow):
         self.canvas.selection_changed.emit(new_box)
         self.on_annotation_changed()
         self.canvas.update()
+
+    def clear_predictions(self) -> None:
+        self.canvas.clear_predictions()
+        self.status_label.setText("已清空所有預測框")
 
     def toggle_ai_inference(self) -> None:
         self.is_ai_enabled = not self.is_ai_enabled

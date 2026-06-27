@@ -77,6 +77,38 @@ class ImageCanvas(QWidget):
         self.prediction_boxes = predictions
         self.update()
 
+    def accept_prediction(self, pred: dict) -> bool:
+        """Convert a prediction box into a formal annotation box."""
+        if not self.annotation:
+            return False
+        
+        # Create a new Box from prediction data
+        new_box = Box.create(
+            pred["label"],
+            pred["x"],
+            pred["y"],
+            pred["width"],
+            pred["height"]
+        )
+        
+        # Add to annotation
+        self.annotation.boxes.append(new_box)
+        
+        # Remove from predictions to avoid duplicates
+        self.prediction_boxes = [p for p in self.prediction_boxes if p != pred]
+        
+        # Select the new box
+        self.selected_box_id = new_box.id
+        self.selection_changed.emit(new_box)
+        self.annotation_changed.emit()
+        self.update()
+        return True
+
+    def clear_predictions(self) -> None:
+        """Clear all prediction boxes."""
+        self.prediction_boxes = []
+        self.update()
+
     def get_selected_box(self) -> Box | None:
         if not self.annotation or not self.selected_box_id:
             return None
@@ -151,6 +183,17 @@ class ImageCanvas(QWidget):
                 return name
         return None
 
+    def box_at_prediction(self, point: QPointF) -> dict | None:
+        """Check if a point is inside any prediction box."""
+        if not self.prediction_boxes:
+            return None
+        image_point = self.screen_to_image(point)
+        for pred in self.prediction_boxes:
+            rect = QRectF(pred["x"], pred["y"], pred["width"], pred["height"])
+            if rect.contains(image_point):
+                return pred
+        return None
+
     def paintEvent(self, event) -> None:  # noqa: N802
         painter = QPainter(self)
         painter.fillRect(self.rect(), Qt.GlobalColor.darkGray)
@@ -172,7 +215,14 @@ class ImageCanvas(QWidget):
                     painter.setPen(QPen(Qt.GlobalColor.green, 2, Qt.PenStyle.DashLine))
                     painter.setBrush(QBrush(Qt.BrushStyle.NoBrush))
                     painter.drawRect(screen_rect)
-                    # Optional: Draw label for prediction
+                    
+                    # Draw a small indicator circle in the center to show it's clickable
+                    center = screen_rect.center()
+                    painter.setPen(QPen(Qt.GlobalColor.white, 2))
+                    painter.setBrush(QBrush(Qt.GlobalColor.green))
+                    painter.drawEllipse(center, 4, 4)
+
+                    # Draw label
                     painter.drawText(screen_rect.topLeft() + QPointF(4, -4), f"{pred['label']} {pred['confidence']:.2f}")
 
             for box in self.annotation.boxes:
@@ -239,6 +289,12 @@ class ImageCanvas(QWidget):
             return
 
         if event.button() == Qt.MouseButton.LeftButton:
+            # Check if clicked on a prediction box
+            pred = self.box_at_prediction(event.position())
+            if pred:
+                self.accept_prediction(pred)
+                return
+
             handle = self.handle_at(event.position())
             selected = self.get_selected_box()
             if handle and selected:
@@ -255,7 +311,7 @@ class ImageCanvas(QWidget):
             self.drag_current = QPointF(event.position())
             self.update()
 
-    def mouseMoveEvent(self, event) -> None:  # noqa: N802
+    def mouseMoveEvent(self, event) -> None:
         if self.pan_start and self.pan_origin:
             delta = QPointF(event.position()) - self.pan_start
             self.offset = self.pan_origin + delta
