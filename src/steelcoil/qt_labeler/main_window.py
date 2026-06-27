@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
     QComboBox,
@@ -31,7 +32,7 @@ from ..paths import IMAGE_EXTENSIONS
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Steel Coil Case Labeler")
+        self.setWindowTitle("Steel Coil Case Labeler - v0.2 UI Tabs")
         self.resize(1550, 920)
 
         self.case_dir: Path | None = None
@@ -52,15 +53,25 @@ class MainWindow(QMainWindow):
         self.selected_label = QLabel("選取框：無")
 
         self.thumbnail_list = QListWidget()
-        self.thumbnail_list.setIconSize(QSize(180, 100))
+        self.thumbnail_list.setIconSize(QSize(220, 124))
+        self.thumbnail_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.thumbnail_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.thumbnail_list.currentRowChanged.connect(self.on_image_selected)
 
         self.box_list = QListWidget()
         self.box_list.currentRowChanged.connect(self.on_box_list_selected)
 
+        self.coil_tree = QListWidget()
+        self.coil_tree.currentRowChanged.connect(self.on_coil_tree_selected)
+
         self.label_combo = QComboBox()
         self.label_combo.addItems(LABELS)
         self.label_combo.currentTextChanged.connect(self.on_label_changed)
+
+        self.track_combo = QComboBox()
+        self.track_combo.currentIndexChanged.connect(self.on_track_changed)
+        self.new_coil_button = QPushButton("新增 Coil / 指派給選取框")
+        self.new_coil_button.clicked.connect(self.create_or_assign_new_coil)
 
         self.save_button = QPushButton("儲存")
         self.save_button.clicked.connect(self.save_annotations)
@@ -81,31 +92,70 @@ class MainWindow(QMainWindow):
 
         label_box = QGroupBox("標籤快捷鍵")
         label_layout = QVBoxLayout()
-        label_layout.addWidget(QLabel("1 coil\n2 coil_id_text\n3 rubber_pad\n4 chain\n5 strap\n6 tarp\n7 wood_block\n8 trailer"))
+        label_layout.addWidget(QLabel("1 coil\n2 coil_id_text\n3 rubber_pad\n4 wood\n5 chain\n6 strap\n7 truck\n8 trailer"))
         label_box.setLayout(label_layout)
+
+        case_tab = QWidget()
+        case_tab_layout = QVBoxLayout()
+        case_tab_layout.addWidget(self.case_stats_label)
+        case_tab_layout.addWidget(self.image_stats_label)
+        case_tab_layout.addWidget(label_box)
+        case_tab_layout.addStretch(1)
+        case_tab.setLayout(case_tab_layout)
+
+        coil_tab = QWidget()
+        coil_tab_layout = QVBoxLayout()
+        coil_tab_layout.addWidget(QLabel("Coil Tree"))
+        coil_tab_layout.addWidget(self.coil_tree, 1)
+        coil_tab.setLayout(coil_tab_layout)
+
+        box_tab = QWidget()
+        box_tab_layout = QVBoxLayout()
+        box_tab_layout.addWidget(QLabel("目前圖片標註框"))
+        box_tab_layout.addWidget(self.box_list, 1)
+        box_tab.setLayout(box_tab_layout)
+
+        camera_tab = QWidget()
+        camera_tab_layout = QVBoxLayout()
+        camera_tab_layout.addWidget(QLabel("Camera / 圖片"))
+        camera_tab_layout.addWidget(self.thumbnail_list, 1)
+        camera_tab.setLayout(camera_tab_layout)
+
+        self.left_tabs = QTabWidget()
+        self.left_tabs.addTab(case_tab, "Case")
+        self.left_tabs.addTab(coil_tab, "Coils")
+        self.left_tabs.addTab(box_tab, "Boxes")
+        self.left_tabs.addTab(camera_tab, "Camera")
+        self.left_tabs.setCurrentWidget(camera_tab)
 
         left_layout = QVBoxLayout()
         left_layout.addWidget(self.case_label)
         left_layout.addWidget(QLabel("目前標籤"))
         left_layout.addWidget(self.label_combo)
-        left_layout.addWidget(label_box)
-        left_layout.addWidget(self.case_stats_label)
-        left_layout.addWidget(self.image_stats_label)
         left_layout.addWidget(self.selected_label)
-        left_layout.addWidget(QLabel("目前圖片標註框"))
-        left_layout.addWidget(self.box_list, 1)
-        left_layout.addWidget(QLabel("Camera / 圖片"))
-        left_layout.addWidget(self.thumbnail_list, 2)
-        left_layout.addWidget(self.next_unlabeled_button)
-        left_layout.addWidget(self.undo_button)
-        left_layout.addWidget(self.copy_button)
-        left_layout.addWidget(self.paste_button)
-        left_layout.addWidget(self.save_button)
-        left_layout.addWidget(self.export_button)
+        left_layout.addWidget(QLabel("Track ID / Parent Coil"))
+        left_layout.addWidget(self.track_combo)
+        left_layout.addWidget(self.new_coil_button)
+        left_layout.addWidget(self.left_tabs, 1)
+
+        nav_layout = QHBoxLayout()
+        nav_layout.addWidget(self.next_unlabeled_button)
+        nav_layout.addWidget(self.undo_button)
+        left_layout.addLayout(nav_layout)
+
+        edit_layout = QHBoxLayout()
+        edit_layout.addWidget(self.copy_button)
+        edit_layout.addWidget(self.paste_button)
+        left_layout.addLayout(edit_layout)
+
+        io_layout = QHBoxLayout()
+        io_layout.addWidget(self.save_button)
+        io_layout.addWidget(self.export_button)
+        left_layout.addLayout(io_layout)
 
         left_panel = QWidget()
         left_panel.setLayout(left_layout)
-        left_panel.setMaximumWidth(410)
+        left_panel.setMaximumWidth(380)
 
         right_layout = QVBoxLayout()
         right_layout.addWidget(self.canvas, 1)
@@ -172,6 +222,8 @@ class MainWindow(QMainWindow):
 
     def refresh_dynamic_panels(self) -> None:
         self.refresh_box_list()
+        self.refresh_coil_tree()
+        self.refresh_track_combo()
         self.update_image_stats()
         self.update_case_stats()
         self.refresh_thumbnail_list(preserve_row=True)
@@ -188,10 +240,12 @@ class MainWindow(QMainWindow):
             if self.annotation:
                 count = len(self.annotation.get_image_annotation(image_path).boxes)
             prefix = "✓" if count > 0 else "○"
-            item = QListWidgetItem(f"{prefix} {image_path.name}\n框數：{count}")
+            camera = image_path.stem.split("_")[-1]
+            item = QListWidgetItem(f"{prefix} {camera}｜框數：{count}")
+            item.setToolTip(image_path.name)
             pixmap = QPixmap(str(image_path))
             if not pixmap.isNull():
-                item.setIcon(pixmap.scaled(180, 100, Qt.AspectRatioMode.KeepAspectRatio))
+                item.setIcon(pixmap.scaled(220, 124, Qt.AspectRatioMode.KeepAspectRatio))
             self.thumbnail_list.addItem(item)
         if current_row >= 0 and current_row < self.thumbnail_list.count():
             self.thumbnail_list.setCurrentRow(current_row)
@@ -204,10 +258,63 @@ class MainWindow(QMainWindow):
         if self.annotation and self.current_image:
             image_ann = self.annotation.get_image_annotation(self.current_image)
             for index, box in enumerate(image_ann.boxes, start=1):
-                item = QListWidgetItem(f"{index}. {box.label}  x={box.x:.0f}, y={box.y:.0f}, w={box.width:.0f}, h={box.height:.0f}")
+                track_text = self.track_text_for_box(box)
+                item = QListWidgetItem(
+                    f"{index}. {box.label} {track_text}  x={box.x:.0f}, y={box.y:.0f}, w={box.width:.0f}, h={box.height:.0f}"
+                )
                 item.setData(Qt.ItemDataRole.UserRole, box.id)
                 self.box_list.addItem(item)
         self.box_list.blockSignals(False)
+
+    def track_text_for_box(self, box: Box) -> str:
+        if not self.annotation:
+            return ""
+        track_id = box.track_id if box.label == "coil" else box.parent_track_id
+        coil = self.annotation.coil_by_track_id(track_id)
+        if coil:
+            return f"[{coil.display_name}]"
+        if track_id:
+            return f"[{track_id}]"
+        return "[未指派]" if box.label in ("coil", "coil_id_text") else ""
+
+    def refresh_track_combo(self) -> None:
+        self.track_combo.blockSignals(True)
+        self.track_combo.clear()
+        self.track_combo.addItem("未指派", "")
+        if self.annotation:
+            for coil in self.annotation.coils:
+                self.track_combo.addItem(coil.display_name, coil.track_id)
+        selected = self.canvas.get_selected_box()
+        selected_track = None
+        if selected:
+            selected_track = selected.track_id if selected.label == "coil" else selected.parent_track_id
+        for index in range(self.track_combo.count()):
+            if self.track_combo.itemData(index) == (selected_track or ""):
+                self.track_combo.setCurrentIndex(index)
+                break
+        self.track_combo.blockSignals(False)
+
+    def refresh_coil_tree(self) -> None:
+        self.coil_tree.blockSignals(True)
+        self.coil_tree.clear()
+        if self.annotation:
+            for coil in self.annotation.coils:
+                cameras = []
+                has_text = False
+                for image_path, image_ann in self.annotation.annotations.items():
+                    camera_has_coil = False
+                    for box in image_ann.boxes:
+                        if box.track_id == coil.track_id or box.parent_track_id == coil.track_id:
+                            camera_has_coil = True
+                        if box.label == "coil_id_text" and box.parent_track_id == coil.track_id:
+                            has_text = True
+                    if camera_has_coil:
+                        cameras.append(image_ann.camera or Path(image_path).stem)
+                suffix = "；文字✓" if has_text else "；文字○"
+                item = QListWidgetItem(f"{coil.display_name} ({', '.join(cameras) if cameras else '尚無 camera'}{suffix})")
+                item.setData(Qt.ItemDataRole.UserRole, coil.track_id)
+                self.coil_tree.addItem(item)
+        self.coil_tree.blockSignals(False)
 
     def on_box_list_selected(self, row: int) -> None:
         if row < 0 or not self.annotation or not self.current_image:
@@ -221,6 +328,25 @@ class MainWindow(QMainWindow):
         self.canvas.selection_changed.emit(box)
         self.canvas.update()
 
+    def on_coil_tree_selected(self, row: int) -> None:
+        if row < 0 or not self.annotation:
+            return
+        item = self.coil_tree.item(row)
+        if not item:
+            return
+        track_id = item.data(Qt.ItemDataRole.UserRole)
+        if not track_id:
+            return
+        for image_index, image_path in enumerate(self.image_paths):
+            image_ann = self.annotation.get_image_annotation(image_path)
+            for box in image_ann.boxes:
+                if box.track_id == track_id or box.parent_track_id == track_id:
+                    self.thumbnail_list.setCurrentRow(image_index)
+                    self.canvas.selected_box_id = box.id
+                    self.canvas.selection_changed.emit(box)
+                    self.canvas.update()
+                    return
+
     def on_image_selected(self, row: int) -> None:
         if self.is_refreshing_ui:
             return
@@ -230,6 +356,8 @@ class MainWindow(QMainWindow):
         image_ann = self.annotation.get_image_annotation(self.current_image)
         self.canvas.set_image(self.current_image, image_ann)
         self.refresh_box_list()
+        self.refresh_coil_tree()
+        self.refresh_track_combo()
         self.update_image_stats()
         self.update_case_stats()
 
@@ -238,9 +366,71 @@ class MainWindow(QMainWindow):
         self.refresh_dynamic_panels()
 
     def on_annotation_changed(self) -> None:
+        self.assign_default_track_for_selected_box()
         self.push_history()
         self.save_annotations()
         self.refresh_dynamic_panels()
+
+    def on_track_changed(self) -> None:
+        if not self.annotation:
+            return
+        box = self.canvas.get_selected_box()
+        if not box:
+            return
+        track_id = self.track_combo.currentData() or None
+        if box.label == "coil":
+            box.track_id = track_id
+        elif box.label == "coil_id_text":
+            box.parent_track_id = track_id
+        else:
+            return
+        self.save_annotations()
+        self.refresh_dynamic_panels()
+        self.canvas.update()
+
+    def create_or_assign_new_coil(self) -> None:
+        if not self.annotation:
+            return
+        coil = self.annotation.create_coil()
+        box = self.canvas.get_selected_box()
+        if box:
+            if box.label == "coil":
+                box.track_id = coil.track_id
+            elif box.label == "coil_id_text":
+                box.parent_track_id = coil.track_id
+        self.save_annotations()
+        self.refresh_dynamic_panels()
+        self.canvas.update()
+
+    def assign_default_track_for_selected_box(self) -> None:
+        if not self.annotation or not self.current_image:
+            return
+        box = self.canvas.get_selected_box()
+        if not box:
+            return
+        if box.label == "coil" and not box.track_id:
+            coil = self.annotation.create_coil()
+            box.track_id = coil.track_id
+        elif box.label == "coil_id_text" and not box.parent_track_id:
+            parent = self.find_containing_coil(box)
+            if parent and parent.track_id:
+                box.parent_track_id = parent.track_id
+
+    def find_containing_coil(self, child: Box) -> Box | None:
+        if not self.annotation or not self.current_image:
+            return None
+        image_ann = self.annotation.get_image_annotation(self.current_image)
+        child_center_x = child.x + child.width / 2
+        child_center_y = child.y + child.height / 2
+        for candidate in image_ann.boxes:
+            if candidate.id == child.id or candidate.label != "coil":
+                continue
+            if (
+                candidate.x <= child_center_x <= candidate.x + candidate.width
+                and candidate.y <= child_center_y <= candidate.y + candidate.height
+            ):
+                return candidate
+        return None
 
     def on_selection_changed(self, box) -> None:
         if box is None:
@@ -248,8 +438,9 @@ class MainWindow(QMainWindow):
             self.box_list.blockSignals(True)
             self.box_list.clearSelection()
             self.box_list.blockSignals(False)
+            self.refresh_track_combo()
             return
-        self.selected_label.setText(f"選取框：{box.label} ({box.width:.0f} x {box.height:.0f})")
+        self.selected_label.setText(f"選取框：{box.label} {self.track_text_for_box(box)} ({box.width:.0f} x {box.height:.0f})")
         index = LABELS.index(box.label) if box.label in LABELS else -1
         if index >= 0 and self.label_combo.currentIndex() != index:
             self.label_combo.blockSignals(True)
@@ -262,6 +453,7 @@ class MainWindow(QMainWindow):
                 self.box_list.setCurrentRow(row)
                 break
         self.box_list.blockSignals(False)
+        self.refresh_track_combo()
 
     def update_image_stats(self) -> None:
         if not self.annotation or not self.current_image:
@@ -292,8 +484,9 @@ class MainWindow(QMainWindow):
         label_lines = [f"{label}: {count}" for label, count in counts.items() if count > 0]
         if not label_lines:
             label_lines = ["尚無標註"]
+        coil_count = len(self.annotation.coils)
         self.case_stats_label.setText(
-            f"Case 完成度：{labeled_images}/{len(self.image_paths)} 張\n" + "\n".join(label_lines)
+            f"Case 完成度：{labeled_images}/{len(self.image_paths)} 張｜Coil 數：{coil_count}\n" + "\n".join(label_lines)
         )
 
     def save_annotations(self) -> None:

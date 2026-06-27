@@ -12,11 +12,14 @@ LABEL_COLORS = {
     "coil": Qt.GlobalColor.red,
     "coil_id_text": Qt.GlobalColor.blue,
     "rubber_pad": Qt.GlobalColor.black,
+    "wood": Qt.GlobalColor.darkRed,
     "chain": Qt.GlobalColor.darkYellow,
     "strap": Qt.GlobalColor.green,
-    "tarp": Qt.GlobalColor.cyan,
-    "wood_block": Qt.GlobalColor.darkRed,
+    "truck": Qt.GlobalColor.cyan,
     "trailer": Qt.GlobalColor.magenta,
+    # Legacy labels from early MVP builds.
+    "wood_block": Qt.GlobalColor.darkRed,
+    "tarp": Qt.GlobalColor.cyan,
 }
 
 HANDLE_SIZE = 9
@@ -180,11 +183,19 @@ class ImageCanvas(QWidget):
         if not self.annotation:
             return None
         image_point = self.screen_to_image(point)
-        for index in range(len(self.annotation.boxes) - 1, -1, -1):
-            box = self.annotation.boxes[index]
-            if self.box_rect(box).contains(image_point):
-                return box
-        return None
+        candidates = []
+        for index, box in enumerate(self.annotation.boxes):
+            rect = self.box_rect(box)
+            if rect.contains(image_point):
+                area = max(0.0, rect.width() * rect.height())
+                # Prefer the smallest containing box so nested labels such as
+                # coil_id_text inside coil can be selected by direct click.
+                # For same-sized overlaps, prefer the later-created box.
+                candidates.append((area, -index, box))
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: (item[0], item[1]))
+        return candidates[0][2]
 
     def box_by_id(self, box_id: str | None) -> Box | None:
         if not box_id or not self.annotation:

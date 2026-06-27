@@ -75,7 +75,7 @@ def fuse_case_results(
         result.status = "REVIEW"
         result.review_reasons.append("Multiple different Coil ID candidates found.")
 
-    for label in ["rubber_pad", "chain", "strap", "wood_block"]:
+    for label in ["rubber_pad", "wood", "chain", "strap"]:
         if object_counts.get(label, 0) == 0:
             result.status = "REVIEW"
             result.review_reasons.append(f"No {label} detected in any camera.")

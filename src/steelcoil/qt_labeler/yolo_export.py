@@ -11,12 +11,16 @@ LABELS = [
     "coil",
     "coil_id_text",
     "rubber_pad",
+    "wood",
     "chain",
     "strap",
-    "tarp",
-    "wood_block",
+    "truck",
     "trailer",
 ]
+
+LEGACY_LABEL_ALIASES = {
+    "wood_block": "wood",
+}
 
 
 def export_case_to_yolo(annotation: CaseAnnotation, output_dir: Path) -> None:
@@ -37,19 +41,23 @@ def export_case_to_yolo(annotation: CaseAnnotation, output_dir: Path) -> None:
         width = image.width()
         height = image.height()
 
-        target_image = image_dir / image_path.name
-        shutil.copy2(image_path, target_image)
-
         rows = []
         for box in image_ann.boxes:
-            if box.label not in LABELS:
+            label = LEGACY_LABEL_ALIASES.get(box.label, box.label)
+            if label not in LABELS:
                 continue
-            class_id = LABELS.index(box.label)
+            class_id = LABELS.index(label)
             x_center = (box.x + box.width / 2) / width
             y_center = (box.y + box.height / 2) / height
             box_width = box.width / width
             box_height = box.height / height
             rows.append(f"{class_id} {x_center:.6f} {y_center:.6f} {box_width:.6f} {box_height:.6f}")
+
+        if not rows:
+            continue
+
+        target_image = image_dir / image_path.name
+        shutil.copy2(image_path, target_image)
 
         label_path = label_dir / f"{image_path.stem}.txt"
         label_path.write_text("\n".join(rows), encoding="utf-8")
